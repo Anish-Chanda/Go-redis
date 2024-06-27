@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/anish-chanda/goredis/helpers"
 )
 
 func main() {
@@ -35,11 +37,21 @@ func handleConn(conn net.Conn) {
 
 	for {
 		buffer := make([]byte, 256)
-		_, err := conn.Read(buffer)
+		n, err := conn.Read(buffer)
 		if err != nil {
 			fmt.Println("Error reading from connection: ", err.Error())
 			return
 		}
-		conn.Write([]byte("+PONG\r\n"))
+
+		command := string(buffer[:n])
+		fmt.Println("Received command ", command)
+
+		//TODO: write a parser and parse this *2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n
+		helpers.RespParser(buffer)
+		// if command == "PING" {
+		// 	conn.Write([]byte("+PONG\r\n"))
+		// } else if command == "ECHO" {
+
+		// }
 	}
 }

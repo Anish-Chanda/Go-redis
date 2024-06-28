@@ -46,12 +46,15 @@ func handleConn(conn net.Conn) {
 		command := string(buffer[:n])
 		fmt.Println("Received command ", command)
 
-		//TODO: write a parser and parse this *2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n
-		helpers.RespParser(buffer)
-		// if command == "PING" {
-		// 	conn.Write([]byte("+PONG\r\n"))
-		// } else if command == "ECHO" {
-
-		// }
+		data, err := helpers.RespParser(buffer)
+		if err != nil {
+			fmt.Println("Error parsing command: ", err.Error())
+		}
+		if data.Command == "PING" {
+			conn.Write([]byte("+PONG\r\n"))
+		} else if data.Command == "ECHO" {
+			response := fmt.Sprintf("$%d\r\n%s\r\n", len(data.Args[0]), data.Args[0])
+			conn.Write([]byte(response))
+		}
 	}
 }

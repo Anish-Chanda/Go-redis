@@ -26,7 +26,7 @@ func RespParser(buffer []byte) (data types.RespData, err error) {
 	case '*': //arrays
 		return parseArray(buffer)
 	default:
-		fmt.Println("def")
+		// fmt.Println("def")
 	}
 	return types.RespData{}, nil
 }
@@ -71,15 +71,15 @@ func parseArrayElement(buffer []byte) (res string, rem []byte, err error) {
 		}
 
 		buffer = buffer[nextClrfIn+2:]
-		//fmt.Println("next bulk string, ", )
-		fmt.Println("remaining buffer, ", string(buffer))
+		// fmt.Println("next bulk string, ")
+		// fmt.Println("remaining buffer, ", string(buffer))
 		return string(buffer[:dataLen]), buffer[dataLen+2:], nil
 		//return parseBulkString(buffer)
 
 	// case '*': //arrays
 	// 	parseArray(buffer)
 	default:
-		fmt.Println("default")
+		// fmt.Println("default")
 		return "", []byte{}, nil
 	}
 
@@ -90,12 +90,12 @@ func parseArray(buffer []byte) (types.RespData, error) {
 	// calc number of elements
 	length, err := strconv.Atoi(string(buffer[1:bytes.Index(buffer, []byte("\r\n"))]))
 	buffer = buffer[4:]
-	fmt.Println("length is, ", length)
+	// fmt.Println("length is, ", length)
 	if err != nil {
 		return types.RespData{}, fmt.Errorf("malformed array: invalid length")
 	}
 
-	fmt.Println("next is,", string(buffer))
+	// fmt.Println("next is,", string(buffer))
 
 	elements := make([]string, 0, length)
 
@@ -107,8 +107,8 @@ func parseArray(buffer []byte) (types.RespData, error) {
 		}
 		elements = append(elements, res)
 
-		fmt.Println("item, ", res)
-		fmt.Println("remaining buffer, ", string(rem))
+		// fmt.Println("item, ", res)
+		// fmt.Println("remaining buffer, ", string(rem))
 	}
 
 	return types.RespData{Command: elements[0], Args: elements[1:]}, nil

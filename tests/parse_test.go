@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -38,7 +37,7 @@ func TestArrayParse(t *testing.T) {
 
 	//test with bulk strings
 	input = "*3\r\n$4\r\nECHO\r\n$3\r\nhey\r\n$4\r\nhey2\r\n"
-	fmt.Println("TESTING ECHO")
+	// fmt.Println("TESTING ECHO")
 	inputBytes = []byte(input)
 
 	respData, err = helpers.RespParser(inputBytes)

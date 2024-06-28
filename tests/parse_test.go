@@ -37,7 +37,7 @@ func TestArrayParse(t *testing.T) {
 	}
 
 	//test with bulk strings
-	input = "*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n"
+	input = "*3\r\n$4\r\nECHO\r\n$3\r\nhey\r\n$4\r\nhey2\r\n"
 	fmt.Println("TESTING ECHO")
 	inputBytes = []byte(input)
 
@@ -51,6 +51,9 @@ func TestArrayParse(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(respData.Args[0], "hey") {
+		t.Fatalf("Expected hey, got %s", respData.Command)
+	}
+	if !reflect.DeepEqual(respData.Args[1], "hey2") {
 		t.Fatalf("Expected hey, got %s", respData.Command)
 	}
 }

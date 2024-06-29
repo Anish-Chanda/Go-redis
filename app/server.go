@@ -194,6 +194,13 @@ func handleHandshake() {
 				os.Exit(1)
 			} else {
 				fmt.Println("Handshake (replconf sharing) with master successfull, continuing...")
+
+				//send PSYNC
+				//ask for replication id and send offset
+				conn.Write([]byte("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"))
+
+				data = readConn(conn)
+				fmt.Println("PSYNC respond", data.Command)
 			}
 		}
 

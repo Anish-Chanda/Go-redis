@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -245,7 +246,30 @@ func handlePsync(conn net.Conn, data types.RespData) {
 		return
 	}
 
-	conn.Write([]byte("+FULLRESYNC " + master_replid + " 0\r\n"))
+	offset, err := strconv.ParseInt(data.Args[1], 10, 0)
+	if err != nil {
+		fmt.Println("Error parsing offset: ", err.Error())
+		conn.Write([]byte("-ERR invalid offset\r\n"))
+		return
+	}
+
+	if offset == -1 {
+		//full resync
+		conn.Write([]byte("+FULLRESYNC " + master_replid + " " + strconv.Itoa(master_repl_offset) + "\r\n"))
+
+		//for this challange we might just always use an empty rdb file instead of generating
+		//(this means replica's will only have the data that was set after the replica was started)
+		//if the replica was started along with the master then the replica will be in sync
+		const emptyRdb = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+		decode, err := hex.DecodeString(emptyRdb)
+		if err != nil {
+			fmt.Println("Error decoding rdb: ", err.Error())
+			conn.Write([]byte("-ERR internal error\r\n"))
+			return
+		}
+		res := append([]byte(fmt.Sprintf("$%d\r\n", len(decode))), decode...)
+		conn.Write(res)
+	}
 }
 
 func handleINFO(conn net.Conn, data types.RespData) {

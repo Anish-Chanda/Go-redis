@@ -92,14 +92,15 @@ func handleConn(conn net.Conn) {
 		}
 
 		//TODO: change to a switch statement
-		if data.Command == "PING" {
+		switch data.Command {
+		case "PING":
 			conn.Write([]byte("+PONG\r\n"))
-		} else if data.Command == "ECHO" {
+		case "ECHO":
 			response := fmt.Sprintf("$%d\r\n%s\r\n", len(data.Args[0]), data.Args[0])
 			conn.Write([]byte(response))
-		} else if data.Command == "SET" {
+		case "SET":
 			handleSET(conn, data)
-		} else if data.Command == "GET" {
+		case "GET":
 			res, ok := tempStore[data.Args[0]]
 			if !ok {
 				conn.Write([]byte("$-1\r\n"))
@@ -114,12 +115,14 @@ func handleConn(conn net.Conn) {
 					response := fmt.Sprintf("$%d\r\n%s\r\n", len(res.Value), res.Value)
 					conn.Write([]byte(response))
 				}
-
 			}
-
-			//INFO command with only replication
-		} else if data.Command == "INFO" {
+		case "INFO":
 			handleINFO(conn, data)
+		case "REPLCONF":
+			handleReplConf(conn, data)
+		case "PSYNC":
+			handlePsync(conn, data)
+		default:
 		}
 	}
 }
@@ -206,6 +209,43 @@ func handleHandshake() {
 
 	}
 
+}
+
+func handleReplConf(conn net.Conn, data types.RespData) {
+	//check conf args
+	if len(data.Args) < 2 {
+		conn.Write([]byte("-ERR wrong number of arguments for 'REPLCONF' command\r\n"))
+		return
+	}
+
+	var (
+		replicaPort int
+		replicaCapa string
+	)
+
+	switch data.Args[0] {
+	case "listening-port":
+		replicaPort := data.Args[1]
+		fmt.Println("REPLCONF: ", replicaPort)
+		conn.Write([]byte("+OK\r\n"))
+	case "capa":
+		replicaCapa := data.Args[1]
+		fmt.Println("REPLCONF: ", replicaCapa)
+		conn.Write([]byte("+OK\r\n"))
+	default:
+	}
+	fmt.Println("REPLCONF: ", replicaPort, replicaCapa)
+
+}
+
+func handlePsync(conn net.Conn, data types.RespData) {
+	//check if enough args are present
+	if len(data.Args) < 2 {
+		conn.Write([]byte("-ERR wrong number of arguments for 'PSYNC' command\r\n"))
+		return
+	}
+
+	conn.Write([]byte("+FULLRESYNC " + master_replid + " 0\r\n"))
 }
 
 func handleINFO(conn net.Conn, data types.RespData) {

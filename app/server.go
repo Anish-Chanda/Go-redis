@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anish-chanda/goredis/helpers"
@@ -38,7 +39,9 @@ func main() {
 	if *replicaOf == "" {
 		role = "master"
 	} else {
+		//initial handshake with master
 		role = "slave"
+		handleHandshake()
 	}
 
 	fmt.Println("Role: ", role)
@@ -149,6 +152,55 @@ func handleSET(conn net.Conn, data types.RespData) {
 	}
 }
 
+func handleHandshake() {
+	//ping master
+	fmt.Println("Initiating Handshake with master")
+	addr := strings.Replace(*replicaOf, " ", ":", 1)
+	fmt.Println("ping addr: ", addr)
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		fmt.Println("Error connecting to master: ", err.Error())
+		os.Exit(1)
+	}
+	conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+	fmt.Println("Pinged Master")
+
+	//check if ping was successfull
+	buffer := make([]byte, 256)
+	_, err = conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading from connection: ", err.Error())
+		os.Exit(1)
+	}
+	data, err := helpers.RespParser(buffer)
+	if err != nil {
+		fmt.Println("Error parsing ping resp: ", err.Error())
+		os.Exit(1)
+	}
+	//continue if ping was successfull
+	if data.Command == "PONG" {
+		// send port in replconf
+		conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n"))
+
+		data := readConn(conn)
+		//continue if replconf 1 was successfull
+		if data.Command == "OK" {
+			// send capabilities
+			conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
+			data = readConn(conn)
+
+			if data.Command != "OK" {
+				fmt.Println("Error in handshake with master")
+				os.Exit(1)
+			} else {
+				fmt.Println("Handshake (replconf sharing) with master successfull, continuing...")
+			}
+		}
+
+	}
+
+}
+
 func handleINFO(conn net.Conn, data types.RespData) {
 	if len(data.Args) < 1 {
 		conn.Write([]byte("$-1\r\n"))
@@ -166,6 +218,22 @@ func handleINFO(conn net.Conn, data types.RespData) {
 	//check what role this server has
 	response := fmt.Sprintf("$%d\r\n%s\r\n", len(res), res)
 	conn.Write([]byte(response))
+}
+
+func readConn(conn net.Conn) types.RespData {
+	buffer := make([]byte, 256)
+	_, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading from connection: ", err.Error())
+		return types.RespData{}
+	}
+
+	data, err := helpers.RespParser(buffer)
+	if err != nil {
+		fmt.Println("Error parsing command: ", err.Error())
+		return types.RespData{}
+	}
+	return data
 }
 
 func genAlphaNumString() string {
